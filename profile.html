@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile | PeerGrid Matrix</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.2/dist/full.min.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/pg-shared.css" />
+  <style>
+    @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .4 } }
+    @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+    html, body {
+      overflow-x: hidden;
+      overflow-y: auto !important;
+      min-height: 100vh;
+    }
+    body.menu-open { overflow: hidden !important; }
+
+    .profile-page-wrapper {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      padding-bottom: 3rem;
+    }
+
+    .profile-cover-big {
+      height: 160px;
+      background: linear-gradient(135deg, #0c4a6e 0%, #0e7490 40%, #0f766e 100%);
+      border-radius: 1.25rem 1.25rem 0 0;
+      position: relative;
+    }
+
+    /* ── NAVBAR mobile search + hamburger ── */
+    .pg-mobile-search {
+      display: none;
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      max-width: 180px;
+    }
+    .pg-hamburger-nav {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 32px; height: 32px;
+      flex-shrink: 0;
+      border-radius: 9px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      color: #94a3b8;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 2px;
+      transition: color .15s, border-color .15s;
+    }
+    .pg-hamburger-nav:hover { color: #38bdf8; border-color: #0c4a6e; }
+
+    @media (max-width: 1023px) {
+      .nav-icon-btn span  { display: none !important; }
+      .nav-icon-btn       { padding: 6px 9px !important; }
+      .pg-nav-username    { display: none !important; }
+      .pg-nav-online-dot  { display: none !important; }
+      .pg-mobile-search   { display: flex !important; }
+      .pg-hamburger-nav   { display: flex !important; }
+      .page-header-inner  { padding-left: 10px !important; padding-right: 10px !important; gap: 6px !important; }
+    }
+    @media (max-width: 640px) {
+      .page-header-inner { gap: 4px !important; }
+      .nav-icon-btn { padding: 6px 7px !important; }
+      .nav-icon-btn i { font-size: 13px !important; }
+      .pg-mobile-search { max-width: 140px; }
+    }
+    @media (max-width: 400px) {
+      .pg-mobile-search { max-width: 110px; }
+    }
+
+    /* ── MOBILE NAV DRAWER ── */
+    .profile-mobile-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(2,6,23,.72);
+      backdrop-filter: blur(2px);
+      z-index: 9998;
+    }
+    .profile-mobile-overlay.active { display: block; }
+
+    .profile-mobile-drawer {
+      position: fixed;
+      top: 0; left: 0;
+      height: 100dvh;
+      width: 82%; max-width: 300px;
+      background: #020617;
+      border-right: 1px solid #1e293b;
+      z-index: 9999;
+      transform: translateX(-100%);
+      transition: transform .25s ease;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .profile-mobile-drawer::-webkit-scrollbar { display: none; }
+    .profile-mobile-drawer.active { transform: translateX(0); }
+
+    /* ── PROFILE RESPONSIVE ── */
+    @media (max-width: 640px) {
+      .profile-page-wrapper {
+        padding: 8px;
+        padding-bottom: 3rem;
+      }
+      .profile-cover-big { height: 110px !important; }
+      #profAvatar {
+        width: 68px !important;
+        height: 68px !important;
+        font-size: 1.4rem !important;
+      }
+      #profAvatar-wrap {
+        margin-top: -44px !important;
+        width: 68px !important;
+      }
+      .prof-toprow {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+      }
+      .prof-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+      .prof-edit-grid  { grid-template-columns: 1fr !important; }
+    }
+    @media (max-width: 400px) {
+      .profile-cover-big { height: 90px !important; }
+      #profAvatar {
+        width: 58px !important;
+        height: 58px !important;
+        font-size: 1.2rem !important;
+      }
+      #profAvatar-wrap {
+        margin-top: -38px !important;
+        width: 58px !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen" style="background:#020617;">
+  <div id="pg-toast"></div>
+  <header class="page-header" id="pg-nav"></header>
+
+  <!-- Mobile overlay + drawer -->
+  <div class="profile-mobile-overlay" id="profileMobileOverlay" onclick="closeMobileMenu()"></div>
+  <div class="profile-mobile-drawer" id="profileMobileDrawer">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid #1e293b;margin-bottom:6px;">
+      <span style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#38bdf8;">
+        <i class="fas fa-grip-lines" style="margin-right:4px;"></i> Menu
+      </span>
+      <button onclick="closeMobileMenu()" style="width:28px;height:28px;border-radius:8px;background:#0f172a;border:1px solid #1e293b;color:#94a3b8;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <button onclick="window.location='dashboard.html'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:transparent;border:none;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;width:100%;text-align:left;">
+      <i class="fas fa-home" style="width:14px;text-align:center;"></i> Home
+    </button>
+    <button onclick="window.location='jobs.html'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:transparent;border:none;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;width:100%;text-align:left;">
+      <i class="fas fa-briefcase" style="width:14px;text-align:center;"></i> Jobs Board
+    </button>
+    <button onclick="window.location='messages.html'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:transparent;border:none;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;width:100%;text-align:left;">
+      <i class="fas fa-comments" style="width:14px;text-align:center;"></i> Messages
+      <span style="margin-left:auto;background:#38bdf8;color:#020617;border-radius:9999px;padding:1px 6px;font-size:8px;font-weight:900;">2</span>
+    </button>
+    <button onclick="window.location='alerts.html'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:transparent;border:none;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;width:100%;text-align:left;">
+      <i class="fas fa-bell" style="width:14px;text-align:center;"></i> Alerts
+      <span style="margin-left:auto;background:#f43f5e;color:#fff;border-radius:9999px;padding:1px 6px;font-size:8px;font-weight:900;">3</span>
+    </button>
+    <button onclick="window.location='profile.html'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:#0c4a6e;border:none;color:#38bdf8;font-size:12px;font-weight:700;cursor:pointer;width:100%;text-align:left;">
+      <i class="fas fa-user" style="width:14px;text-align:center;"></i> My Profile
+    </button>
+    <button onclick="pgLogout()" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:transparent;border:none;color:#f43f5e;font-size:12px;font-weight:600;cursor:pointer;width:100%;text-align:left;margin-top:4px;">
+      <i class="fas fa-sign-out-alt" style="width:14px;text-align:center;"></i> Logout
+    </button>
+  </div>
+
+  <div class="profile-page-wrapper">
+    <div class="pg-card overflow-hidden">
+
+      <!-- COVER -->
+      <div id="profCover" onclick="handleCoverClick()" class="profile-cover-big cursor-pointer"
+        style="height:160px; border-radius:1.25rem 1.25rem 0 0; z-index:5;">
+        <button id="coverUploadBtn"
+          onclick="event.stopPropagation(); document.getElementById('coverFileInput').click()"
+          style="display:none; position:absolute; bottom:10px; right:10px; background:rgba(15,23,42,0.85); border:1px solid #334155; color:#38bdf8; padding:5px 10px; font-size:11px; border-radius:9999px; cursor:pointer; align-items:center; gap:6px; backdrop-filter:blur(4px); z-index:20;">
+          <i class="fas fa-camera"></i> Change Banner
+        </button>
+        <input type="file" id="coverFileInput" accept="image/*" class="hidden" onchange="handleCoverSelect(event)" />
+      </div>
+
+      <div style="padding:0 20px 28px;">
+
+        <!-- AVATAR -->
+        <div id="profAvatar-wrap" style="margin-top:-68px; margin-bottom:12px; margin-left:12px; position:relative; width:84px; z-index:10;">
+          <div id="profAvatar" onclick="handleAvatarClick()"
+            style="width:84px; height:84px; border-radius:50%; border:4px solid #0f172a; background:#0c4a6e; display:flex; align-items:center; justify-content:center; font-weight:900; color:#38bdf8; font-size:1.8rem; overflow:hidden; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,.3);">U
+          </div>
+          <button id="avatarUploadBtn" onclick="document.getElementById('avatarFileInput').click()"
+            style="display:none; position:absolute; bottom:2px; right:2px; width:26px; height:26px; border-radius:50%; background:#0ea5e9; border:2px solid #0f172a; color:#0f172a; font-size:11px; cursor:pointer; align-items:center; justify-content:center; z-index:20;">
+            <i class="fas fa-camera"></i>
+          </button>
+          <input type="file" id="avatarFileInput" accept="image/*" class="hidden" onchange="handleAvatarSelect(event)" />
+        </div>
+
+        <!-- NAME + EDIT BTN -->
+        <div class="prof-toprow flex flex-wrap justify-between items-start gap-3 mb-5">
+          <div>
+            <h2 id="profDisplayName" class="text-xl font-black text-slate-100"></h2>
+            <p id="profDisplayBio" class="text-xs text-slate-400 mt-0.5"></p>
+            <p id="profDisplayCity" class="text-[11px] text-slate-500 mt-0.5"></p>
+          </div>
+          <button onclick="toggleProfileEdit()" id="editProfileBtn"
+            class="btn btn-sm btn-outline border-sky-700 text-sky-400 hover:bg-sky-900/30 rounded-full text-xs px-4">
+            <i class="fas fa-pen mr-1"></i> Edit Profile
+          </button>
+        </div>
+
+        <!-- VIEW MODE -->
+        <div id="profileViewMode" class="space-y-5">
+          <div class="prof-stats-grid grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="pg-card p-3 text-center">
+              <p class="text-[9px] uppercase text-slate-500 font-bold tracking-wider">Phone</p>
+              <p id="vw-phone" class="text-xs text-slate-300 mt-1 font-semibold">—</p>
+            </div>
+            <div class="pg-card p-3 text-center">
+              <p class="text-[9px] uppercase text-slate-500 font-bold tracking-wider">DOB</p>
+              <p id="vw-dob" class="text-xs text-slate-300 mt-1 font-semibold">—</p>
+            </div>
+            <div class="pg-card p-3 text-center">
+              <p class="text-[9px] uppercase text-slate-500 font-bold tracking-wider">City</p>
+              <p id="vw-city" class="text-xs text-slate-300 mt-1 font-semibold">—</p>
+            </div>
+            <div class="pg-card p-3 text-center">
+              <p class="text-[9px] uppercase text-slate-500 font-bold tracking-wider">Country</p>
+              <p id="vw-country" class="text-xs text-slate-300 mt-1 font-semibold">—</p>
+            </div>
+          </div>
+          <div class="pg-card p-4 space-y-1">
+            <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500"><i class="fas fa-envelope mr-1"></i> Email</p>
+            <p id="vw-email" class="text-sm text-sky-400 font-semibold">—</p>
+          </div>
+          <div class="pg-card p-4 space-y-2">
+            <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500"><i class="fas fa-tools mr-1"></i> Skills</p>
+            <div id="vw-skills" class="flex flex-wrap gap-2"></div>
+          </div>
+          <div class="pg-card p-4 space-y-3">
+            <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500"><i class="fas fa-graduation-cap mr-1"></i> Education</p>
+            <div id="vw-education" class="space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- EDIT MODE -->
+        <div id="profileEditMode" class="hidden space-y-5">
+          <div class="prof-edit-grid grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><label class="pg-label">Full Name</label><input type="text" id="ef-name" class="pg-input" placeholder="Your full name" /></div>
+            <div><label class="pg-label">Email</label><input type="email" id="ef-email" class="pg-input" readonly style="opacity:.5;cursor:not-allowed" /></div>
+            <div><label class="pg-label">Date of Birth</label><input type="date" id="ef-dob" class="pg-input" /></div>
+            <div><label class="pg-label">Phone Number</label><input type="text" id="ef-phone" class="pg-input" placeholder="+92 300 0000000" /></div>
+            <div>
+              <label class="pg-label">Country</label>
+              <div class="sd-wrap" id="sd-country">
+                <input type="text" class="sd-input-box" placeholder="Search country..." autocomplete="off"
+                  oninput="sdFilter('sd-country')" onfocus="sdOpen('sd-country')" onblur="sdBlur('sd-country')" id="sd-country-input" />
+                <button class="sd-clear" id="sd-country-clear" onclick="sdClear('sd-country')"><i class="fas fa-times"></i></button>
+                <i class="fas fa-chevron-down sd-chevron"></i>
+                <div class="sd-list" id="sd-country-list"></div>
+              </div>
+              <input type="hidden" id="ef-country" />
+            </div>
+            <div>
+              <label class="pg-label">City</label>
+              <div class="sd-wrap" id="sd-city">
+                <input type="text" class="sd-input-box" placeholder="Search city..." autocomplete="off"
+                  oninput="sdFilter('sd-city')" onfocus="sdOpen('sd-city')" onblur="sdBlur('sd-city')" id="sd-city-input" />
+                <button class="sd-clear" id="sd-city-clear" onclick="sdClear('sd-city')"><i class="fas fa-times"></i></button>
+                <i class="fas fa-chevron-down sd-chevron"></i>
+                <div class="sd-list" id="sd-city-list"></div>
+              </div>
+              <input type="hidden" id="ef-city" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="pg-label">Bio / Headline</label>
+              <input type="text" id="ef-bio" class="pg-input" placeholder="e.g. Full Stack Developer | Open to Work" />
+            </div>
+          </div>
+
+          <div>
+            <label class="pg-label">Skills</label>
+            <div class="sd-wrap" id="sd-skill">
+              <input type="text" class="sd-input-box" placeholder="Search and add a skill..." autocomplete="off"
+                oninput="sdFilter('sd-skill')" onfocus="sdOpen('sd-skill')" onblur="sdBlur('sd-skill')" id="sd-skill-input" />
+              <i class="fas fa-chevron-down sd-chevron"></i>
+              <div class="sd-list" id="sd-skill-list"></div>
+            </div>
+            <div id="ef-skillTags" class="flex flex-wrap gap-2 mt-2" style="min-height:24px;"></div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="pg-label mb-0">Education</label>
+              <button onclick="addEduEntry()" class="text-[10px] font-bold text-sky-400 hover:text-sky-300 border border-sky-800 rounded-full px-3 py-1 transition-colors">
+                <i class="fas fa-plus mr-1"></i> Add
+              </button>
+            </div>
+            <div id="ef-eduList" class="space-y-3"></div>
+          </div>
+
+          <div class="flex gap-3 pt-2 pb-4">
+            <button onclick="saveProfile()" class="btn btn-primary btn-sm rounded-full font-bold flex-1 text-slate-900">
+              <i class="fas fa-save mr-1"></i> Save Profile
+            </button>
+            <button onclick="toggleProfileEdit()" class="btn btn-sm btn-outline border-slate-700 text-slate-400 rounded-full flex-1">Cancel</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="pg-shared.js"></script>
+  <script>
+    let currentUser = null, profileData = {}, editSkills = [], editEduList = [], pendingAvatar = null, pendingCover = null;
+
+    window.onload = function () {
+      currentUser = pgGetUser(); if (!currentUser) return;
+      profileData = pgGetProfile(currentUser.email);
+      pgBuildNav('profile');
+      renderCoverBox();
+      loadProfileIntoView();
+    };
+
+    /* ── Mobile drawer ── */
+    function toggleMobileMenu() {
+      const drawer  = document.getElementById('profileMobileDrawer');
+      const overlay = document.getElementById('profileMobileOverlay');
+      if (!drawer || !overlay) return;
+      drawer.classList.toggle('active');
+      overlay.classList.toggle('active');
+      document.body.classList.toggle('menu-open', drawer.classList.contains('active'));
+    }
+    function closeMobileMenu() {
+      document.getElementById('profileMobileDrawer')?.classList.remove('active');
+      document.getElementById('profileMobileOverlay')?.classList.remove('active');
+      document.body.classList.remove('menu-open');
+    }
+    window.addEventListener('resize', () => { if (window.innerWidth >= 1024) closeMobileMenu(); });
+
+    function formatDate(d) {
+      if (!d) return '—';
+      const p = d.split('-');
+      return `${p[2]}/${p[1]}/${p[0]}`;
+    }
+
+    function renderAvatarBox() {
+      const name = profileData.name || currentUser.name || '';
+      const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const box = document.getElementById('profAvatar');
+      const src = pendingAvatar || profileData.avatar;
+      box.innerHTML = src ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;" alt="avatar"/>` : initials;
+    }
+
+    function handleAvatarSelect(e) {
+      const file = e.target.files[0]; if (!file) return;
+      const r = new FileReader();
+      r.onload = ev => { pendingAvatar = ev.target.result; renderAvatarBox(); showToast('Photo selected — click Save Profile to apply'); };
+      r.readAsDataURL(file);
+    }
+
+    function loadProfileIntoView() {
+      const name    = profileData.name    || currentUser.name || '';
+      const bio     = profileData.bio     || currentUser.bio  || '';
+      const city    = profileData.city    || '';
+      const country = profileData.country || '';
+      renderAvatarBox(); renderCoverBox();
+      document.getElementById('profDisplayName').textContent = name;
+      document.getElementById('profDisplayBio').textContent  = bio;
+      document.getElementById('profDisplayCity').innerHTML   = (city || country)
+        ? `<i class="fas fa-map-marker-alt mr-1"></i>${[city, country].filter(Boolean).join(', ')}` : '';
+      document.getElementById('vw-email').textContent   = currentUser.email  || '—';
+      document.getElementById('vw-phone').textContent   = profileData.phone  || '—';
+      document.getElementById('vw-dob').textContent     = profileData.dob    ? formatDate(profileData.dob) : '—';
+      document.getElementById('vw-city').textContent    = profileData.city   || '—';
+      document.getElementById('vw-country').textContent = profileData.country|| '—';
+      const skillsArr = profileData.skills || (currentUser.skills || '').split(',').map(s => s.trim()).filter(Boolean);
+      document.getElementById('vw-skills').innerHTML = skillsArr.length
+        ? skillsArr.map(s => `<span class="badge badge-sm bg-sky-950 border-sky-900 text-sky-400 text-[10px] font-semibold">${s}</span>`).join('')
+        : '<span class="text-xs text-slate-600">No skills added yet.</span>';
+      const eduArr = profileData.education || [];
+      document.getElementById('vw-education').innerHTML = eduArr.length
+        ? eduArr.map(e => `
+          <div class="flex gap-3 items-start">
+            <div class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-content-center flex-shrink-0 mt-0.5 flex items-center justify-center">
+              <i class="fas fa-university text-slate-500 text-xs"></i>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-slate-200">${e.institute || '—'}</p>
+              <p class="text-[11px] text-slate-500">${e.startYear || '?'} — ${e.completed ? 'Present' : e.endYear || '?'}</p>
+              <span class="badge badge-xs mt-1 ${e.completed ? 'badge-success text-white' : 'bg-amber-900/40 text-amber-400 border-amber-800'} font-bold text-[9px]">${e.completed ? '✓ Completed' : 'In Progress'}</span>
+            </div>
+          </div>`).join('')
+        : '<p class="text-xs text-slate-600">No education added yet.</p>';
+    }
+
+    function toggleProfileEdit() {
+      const viewMode    = document.getElementById('profileViewMode');
+      const editMode    = document.getElementById('profileEditMode');
+      const btn         = document.getElementById('editProfileBtn');
+      const camBtn      = document.getElementById('avatarUploadBtn');
+      const coverCamBtn = document.getElementById('coverUploadBtn');
+      if (editMode.classList.contains('hidden')) {
+        editMode.classList.remove('hidden'); viewMode.classList.add('hidden');
+        btn.innerHTML = '<i class="fas fa-times mr-1"></i> Cancel';
+        if (camBtn)      camBtn.style.display = 'flex';
+        if (coverCamBtn) coverCamBtn.style.display = 'flex';
+        loadProfileIntoEdit();
+      } else {
+        editMode.classList.add('hidden'); viewMode.classList.remove('hidden');
+        btn.innerHTML = '<i class="fas fa-pen mr-1"></i> Edit Profile';
+        if (camBtn)      camBtn.style.display = 'none';
+        if (coverCamBtn) coverCamBtn.style.display = 'none';
+        pendingAvatar = null; pendingCover = null;
+        renderAvatarBox(); renderCoverBox();
+      }
+    }
+
+    function loadProfileIntoEdit() {
+      document.getElementById('ef-name').value  = profileData.name  || currentUser.name || '';
+      document.getElementById('ef-email').value = currentUser.email || '';
+      document.getElementById('ef-dob').value   = profileData.dob   || '';
+      document.getElementById('ef-phone').value = profileData.phone || '';
+      document.getElementById('ef-bio').value   = profileData.bio   || currentUser.bio || '';
+      sdInit('sd-country', 'country');
+      sdInit('sd-city',    'city');
+      sdInit('sd-skill',   'skill', (val) => { if (val) addSkillTag(val); document.getElementById('sd-skill-input').value = ''; });
+      if (profileData.country) sdSetValue('sd-country', profileData.country);
+      if (profileData.city)    sdSetValue('sd-city',    profileData.city);
+      editSkills  = [...(profileData.skills || (currentUser.skills || '').split(',').map(s => s.trim()).filter(Boolean))];
+      renderEditSkillTags();
+      editEduList = JSON.parse(JSON.stringify(profileData.education || []));
+      renderEditEduList();
+    }
+
+    function addSkillTag(skill) {
+      if (!editSkills.includes(skill)) { editSkills.push(skill); renderEditSkillTags(); showToast(`Added: ${skill}`); }
+    }
+    function removeEditSkill(s) { editSkills = editSkills.filter(x => x !== s); renderEditSkillTags(); }
+    function renderEditSkillTags() {
+      document.getElementById('ef-skillTags').innerHTML = editSkills.map(s =>
+        `<span class="skill-tag">${s}<button onclick="removeEditSkill('${s.replace(/'/g,"\\'")}')"><i class="fas fa-times"></i></button></span>`).join('');
+    }
+
+    function addEduEntry() { editEduList.push({ institute:'', startYear:'', endYear:'', completed:false }); renderEditEduList(); }
+    function removeEduEntry(i) { editEduList.splice(i, 1); renderEditEduList(); }
+
+    function renderEditEduList() {
+      const years = Array.from({ length: 30 }, (_, i) => 2030 - i);
+      document.getElementById('ef-eduList').innerHTML = editEduList.map((e, i) => `
+        <div class="edu-card space-y-3">
+          <div class="flex justify-between items-center">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Education ${i + 1}</p>
+            <button onclick="removeEduEntry(${i})" class="text-slate-600 hover:text-rose-400 text-xs transition-colors"><i class="fas fa-trash"></i></button>
+          </div>
+          <div>
+            <label class="pg-label">Institute Name</label>
+            <div class="sd-wrap" id="sd-inst-${i}">
+              <input type="text" class="sd-input-box" placeholder="Search university / college..." autocomplete="off"
+               value="${e.institute || ''}"
+               oninput="sdInstFilter(${i})" onfocus="sdInstOpen(${i})" onblur="sdInstBlur(${i})" id="sd-inst-${i}-input"/>
+              <button class="sd-clear" id="sd-inst-${i}-clear" onclick="sdInstClear(${i})" style="${e.institute ? 'display:block' : ''}"><i class="fas fa-times"></i></button>
+              <i class="fas fa-chevron-down sd-chevron"></i>
+              <div class="sd-list" id="sd-inst-${i}-list"></div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="pg-label">Start Year</label>
+              <select class="pg-input" style="padding:8px 12px;" onchange="editEduList[${i}].startYear=this.value">
+                <option value="">Year</option>${years.map(y => `<option ${e.startYear == y ? 'selected' : ''}>${y}</option>`).join('')}
+              </select>
+            </div>
+            <div><label class="pg-label">End Year</label>
+              <select class="pg-input" style="padding:8px 12px;${e.completed?'opacity:.4':''}" onchange="editEduList[${i}].endYear=this.value" ${e.completed?'disabled':''}>
+                <option value="">Year</option>${years.map(y => `<option ${e.endYear == y ? 'selected' : ''}>${y}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <label class="flex items-center gap-2.5 cursor-pointer w-fit">
+            <input type="checkbox" class="checkbox checkbox-success checkbox-sm" ${e.completed?'checked':''}
+              onchange="editEduList[${i}].completed=this.checked; renderEditEduList()"/>
+            <span class="text-xs font-semibold text-slate-300">Education Completed</span>
+          </label>
+        </div>`).join('');
+      editEduList.forEach((e, i) => sdInstInit(i, e.institute || ''));
+    }
+
+    function sdInstInit(i,v){sdInstRenderList(i,'');if(v){const inp=document.getElementById(`sd-inst-${i}-input`);if(inp)inp.value=v;}}
+    function sdInstOpen(i){document.querySelectorAll('.sd-wrap.open').forEach(el=>{if(el.id!==`sd-inst-${i}`)el.classList.remove('open');});document.getElementById(`sd-inst-${i}`).classList.add('open');sdInstRenderList(i,document.getElementById(`sd-inst-${i}-input`).value);}
+    function sdInstBlur(i){setTimeout(()=>{document.getElementById(`sd-inst-${i}`)?.classList.remove('open');},180);}
+    function sdInstFilter(i){const q=document.getElementById(`sd-inst-${i}-input`).value;const c=document.getElementById(`sd-inst-${i}-clear`);if(c)c.style.display=q?'block':'none';sdInstRenderList(i,q);document.getElementById(`sd-inst-${i}`).classList.add('open');}
+    function sdInstClear(i){document.getElementById(`sd-inst-${i}-input`).value='';const c=document.getElementById(`sd-inst-${i}-clear`);if(c)c.style.display='none';editEduList[i].institute='';sdInstRenderList(i,'');}
+    function sdInstRenderList(i,query){
+      const listEl=document.getElementById(`sd-inst-${i}-list`);if(!listEl)return;
+      const q=(query||'').trim().toLowerCase();const groups=SD_DATA.institute;
+      let html='';let count=0;
+      groups.forEach(grp=>{
+        const matches=grp.items.filter(item=>!q||item.toLowerCase().includes(q));
+        if(!matches.length)return;
+        html+=`<div class="sd-group-label">${grp.g}</div>`;
+        matches.slice(0,q?20:5).forEach(item=>{
+          const isSel=item===editEduList[i]?.institute;
+          const hi=q?item.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'gi'),'<span class="sd-highlight">$1</span>'):item;
+          html+=`<div class="sd-item${isSel?' selected':''}" onmousedown="sdInstSelect(${i},'${item.replace(/'/g,"\\'")}')"><i class="fas ${isSel?'fa-check text-sky-400':'fa-circle'}" style="font-size:${isSel?'10px':'7px'};color:${isSel?'#38bdf8':'#1e293b'};"></i><span>${hi}</span></div>`;
+          count++;
+        });
+      });
+      if(!count)html=`<div class="sd-empty"><i class="fas fa-search mr-1"></i> No results for "${query}"</div>`;
+      listEl.innerHTML=html;
+    }
+    function sdInstSelect(i,value){
+      editEduList[i].institute=value;
+      document.getElementById(`sd-inst-${i}-input`).value=value;
+      const c=document.getElementById(`sd-inst-${i}-clear`);if(c)c.style.display='block';
+      document.getElementById(`sd-inst-${i}`).classList.remove('open');
+      showToast(`Selected: ${value.split('(')[0].trim()}`);
+    }
+
+    function saveProfile() {
+      profileData.name      = document.getElementById('ef-name').value.trim();
+      profileData.dob       = document.getElementById('ef-dob').value;
+      profileData.phone     = document.getElementById('ef-phone').value.trim();
+      profileData.bio       = document.getElementById('ef-bio').value.trim();
+      profileData.country   = document.getElementById('ef-country').value || sdState['sd-country']?.label || '';
+      profileData.city      = document.getElementById('ef-city').value    || sdState['sd-city']?.label    || '';
+      profileData.skills    = [...editSkills];
+      profileData.education = JSON.parse(JSON.stringify(editEduList));
+      if (pendingAvatar) { profileData.avatar = pendingAvatar; pendingAvatar = null; }
+      if (pendingCover)  { profileData.cover  = pendingCover;  pendingCover  = null; }
+      pgSaveProfile(currentUser.email, profileData);
+      currentUser.name = profileData.name || currentUser.name;
+      currentUser.bio  = profileData.bio  || currentUser.bio;
+      localStorage.setItem('ln_current_user', JSON.stringify(currentUser));
+      pgBuildNav('profile');
+      loadProfileIntoView();
+      toggleProfileEdit();
+      showToast('Profile updated successfully! 🚀');
+    }
+
+    function handleAvatarClick() {
+      const editMode = document.getElementById('profileEditMode');
+      if (editMode.classList.contains('hidden')) {
+        const src = profileData.avatar || '';
+        if (src) {
+          const modal = document.getElementById('avatarModal');
+          const img   = document.getElementById('modalBigImg');
+          if (modal && img) { img.src = src; modal.style.display = 'flex'; }
+        } else { showToast('No profile picture uploaded yet.'); }
+      } else { document.getElementById('avatarFileInput').click(); }
+    }
+    function closeAvatarModal() { document.getElementById('avatarModal').style.display = 'none'; }
+
+    function renderCoverBox() {
+      const el = document.getElementById('profCover'); if (!el) return;
+      const src = pendingCover || profileData.cover;
+      if (src) {
+        el.style.backgroundImage    = `url('${src}')`;
+        el.style.backgroundSize     = 'cover';
+        el.style.backgroundPosition = 'center';
+        el.style.backgroundRepeat   = 'no-repeat';
+      } else {
+        el.style.backgroundImage = 'linear-gradient(135deg, #0c4a6e 0%, #0e7490 40%, #0f766e 100%)';
+      }
+    }
+    function handleCoverClick() {
+      const editMode = document.getElementById('profileEditMode');
+      if (!editMode || editMode.classList.contains('hidden')) {
+        const src = pendingCover || profileData.cover;
+        if (src) {
+          const modal = document.getElementById('coverModal');
+          const img   = document.getElementById('modalBigCoverImg');
+          if (modal && img) { img.src = src; modal.style.display = 'flex'; }
+        } else { showToast('Default gradient theme is active. Please upload a banner first.'); }
+      } else { document.getElementById('coverFileInput').click(); }
+    }
+    function handleCoverSelect(e) {
+      const file = e.target.files[0]; if (!file) return;
+      const r = new FileReader();
+      r.onload = ev => { pendingCover = ev.target.result; renderCoverBox(); showToast('Banner selected — click Save Profile to apply'); };
+      r.readAsDataURL(file);
+    }
+    function closeCoverModal() { document.getElementById('coverModal').style.display = 'none'; }
+  </script>
+
+  <div id="avatarModal" onclick="closeAvatarModal()"
+    style="display:none; position:fixed; inset:0; background:rgba(2,6,23,0.85); z-index:9999; justify-content:center; align-items:center; backdrop-filter:blur(4px); cursor:pointer;">
+    <div style="position:relative; max-width:90%; max-height:85vh;" onclick="event.stopPropagation()">
+      <button onclick="closeAvatarModal()" style="position:absolute; top:-36px; right:0; background:none; border:none; color:#cbd5e1; font-size:22px; cursor:pointer;"><i class="fas fa-times"></i></button>
+      <img id="modalBigImg" src="" alt="Profile Preview"
+        style="max-width:100%; max-height:80vh; border-radius:1rem; border:2px solid #1e293b; box-shadow:0 25px 50px -12px rgba(0,0,0,.5); object-fit:contain;" />
+    </div>
+  </div>
+
+  <div id="coverModal" onclick="closeCoverModal()"
+    style="display:none; position:fixed; inset:0; background:rgba(2,6,23,0.9); z-index:9999; justify-content:center; align-items:center; backdrop-filter:blur(4px); cursor:pointer;">
+    <div style="position:relative; width:90%; max-width:900px;" onclick="event.stopPropagation()">
+      <button onclick="closeCoverModal()" style="position:absolute; top:-36px; right:0; background:none; border:none; color:#cbd5e1; font-size:22px; cursor:pointer;"><i class="fas fa-times"></i></button>
+      <img id="modalBigCoverImg" src="" alt="Banner Preview"
+        style="width:100%; max-height:75vh; border-radius:.75rem; border:2px solid #1e293b; box-shadow:0 25px 50px -12px rgba(0,0,0,.5); object-fit:cover;" />
+    </div>
+  </div>
+</body>
+</html>

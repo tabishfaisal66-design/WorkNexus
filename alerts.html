@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Alerts | PeerGrid Matrix</title>
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.2/dist/full.min.css" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<link rel="stylesheet" href="css/pg-shared.css"/>
+<style>
+.alert-row{display:flex;gap:12px;padding:14px;border-radius:14px;cursor:pointer;transition:background .15s;align-items:flex-start;}
+.alert-row:hover{background:#1e293b40;}
+.alert-row.unread{background:#0c4a6e12;border-left:3px solid #38bdf8;}
+.alert-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
+.alert-dot{width:8px;height:8px;border-radius:50%;background:#38bdf8;flex-shrink:0;margin-top:6px;}
+.filter-pill{font-size:11px;font-weight:700;padding:6px 14px;border-radius:9999px;border:1px solid #1e293b;color:#64748b;background:transparent;cursor:pointer;transition:all .15s;}
+.filter-pill.active{background:#0c4a6e;color:#38bdf8;border-color:#0c4a6e;}
+.filter-pill:hover:not(.active){background:#1e293b;color:#cbd5e1;}
+
+@media (max-width: 1023px) {
+  .page-wrapper { display: block !important; padding: 8px !important; }
+  .left-sidebar, .right-sidebar { display: none !important; }
+  .main-content { width: 100% !important; max-width: 100% !important; }
+}
+</style>
+</head>
+<body class="min-h-screen" style="background:#020617;">
+
+<div class="drawer">
+  <input id="mobile-drawer-toggle" type="checkbox" class="drawer-toggle" />
+  
+  <div class="drawer-content flex flex-col">
+
+    <div id="pg-toast"></div>
+
+    <!-- HEADER NAV -->
+    <header class="page-header" id="pg-nav"></header>
+
+    <div class="page-wrapper">
+  
+      <aside class="left-sidebar" id="pg-left-sidebar"></aside>
+
+      <main class="main-content">
+        <div class="pg-card" style="padding:20px;">
+          <div class="flex justify-between items-center mb-4">
+            <h2 style="font-size:16px;font-weight:900;color:#f1f5f9;"><i class="fas fa-bell" style="color:#38bdf8;margin-right:8px;"></i>Notifications</h2>
+            <button onclick="markAllRead()" style="font-size:11px;color:#38bdf8;background:none;border:none;cursor:pointer;font-weight:700;">Mark all as read</button>
+          </div>
+          <div class="flex gap-2 mb-5" style="flex-wrap:wrap;">
+            <button class="filter-pill active" id="filter-all" onclick="setFilter('all')">All</button>
+            <button class="filter-pill" id="filter-unread" onclick="setFilter('unread')">Unread</button>
+            <button class="filter-pill" id="filter-like" onclick="setFilter('like')"><i class="fas fa-heart" style="margin-right:4px;"></i>Likes</button>
+            <button class="filter-pill" id="filter-comment" onclick="setFilter('comment')"><i class="fas fa-comment" style="margin-right:4px;"></i>Comments</button>
+            <button class="filter-pill" id="filter-connect" onclick="setFilter('connect')"><i class="fas fa-user-plus" style="margin-right:4px;"></i>Connections</button>
+            <button class="filter-pill" id="filter-job" onclick="setFilter('job')"><i class="fas fa-briefcase" style="margin-right:4px;"></i>Jobs</button>
+          </div>
+          <div id="alertsList" style="display:flex;flex-direction:column;gap:2px;"></div>
+        </div>
+      </main>
+
+      <!-- RIGHT SIDEBAR -->
+      <aside class="right-sidebar space-y-4" id="pg-right-sidebar">
+        <!-- DYNAMIC EXTENDED SIDE PROFILE PANEL -->
+        <div id="sideProfileCard" class="pg-card p-4 space-y-4 hidden" style="border-color: #38bdf8;">
+          <div class="flex justify-between items-center pb-1 border-b border-slate-900">
+            <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#38bdf8;">User Profile Detail</p>
+            <button onclick="closeSideProfile()" class="text-slate-500 hover:text-rose-400 text-xs p-1"><i class="fas fa-times"></i></button>
+          </div>
+          
+          <div class="flex flex-col items-center text-center space-y-2 pt-1">
+            <div class="relative w-20 h-20">
+              <img id="sideUserImg" src="" alt="Profile" class="w-20 h-20 rounded-full object-cover border-2 border-sky-500/40 shadow-xl hidden" />
+              <div id="sideUserAvatar" class="w-20 h-20 rounded-full bg-slate-800 border border-sky-500/40 flex items-center justify-center text-2xl font-bold text-sky-400 shadow-xl"></div>
+            </div>
+            <div>
+              <h3 id="sideUserName" class="text-sm font-black text-slate-200 tracking-wide"></h3>
+              <p id="sideUserTitle" class="text-xs text-slate-400 mt-0.5"></p>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider"><i class="fas fa-user text-sky-500 mr-1"></i> About</p>
+            <p id="sideUserAbout" class="text-xs text-slate-300 bg-slate-950 p-2.5 rounded-xl border border-slate-900 leading-relaxed"></p>
+          </div>
+
+          <div class="space-y-1">
+            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider"><i class="fas fa-code text-sky-500 mr-1"></i> Skills</p>
+            <div id="sideUserSkills" class="flex flex-wrap gap-1 bg-slate-950 p-2 rounded-xl border border-slate-900"></div>
+          </div>
+
+          <div class="space-y-1">
+            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider"><i class="fas fa-briefcase text-sky-500 mr-1"></i> Experience</p>
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-900 flex items-center gap-2">
+              <i class="fas fa-building text-slate-600 text-xs pl-1"></i>
+              <p id="sideUserExperience" class="text-xs font-medium text-slate-300 truncate"></p>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider"><i class="fas fa-graduation-cap text-sky-500 mr-1"></i> Education</p>
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-900 flex items-center gap-2">
+              <i class="fas fa-university text-slate-600 text-xs pl-1"></i>
+              <p id="sideUserEducation" class="text-xs font-medium text-slate-300 truncate"></p>
+            </div>
+          </div>
+
+          <div class="w-full pt-2 flex gap-2 border-t border-slate-900">
+            <button id="sideMessageBtn" class="btn btn-xs btn-primary rounded-full flex-1 text-slate-900 font-bold py-1 text-[11px]">Message</button>
+            <button id="sideConnectBtn" data-connect-name="" onclick="pgHandleConnect(this, document.getElementById('sideUserName').textContent)" class="btn btn-xs rounded-full flex-1 text-[11px] pg-connect-btn">Connect</button>
+          </div>
+        </div>
+
+        <!-- SEARCH COMPONENT -->
+        <div class="pg-card p-4 space-y-2">
+          <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#475569;">Search Feed & Users</p>
+          <div class="relative">
+            <i class="fas fa-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#64748b; font-size:12px;"></i>
+            <input type="text" id="feedSearchInput" oninput="executeFeedSearch(this)" placeholder="Search " class="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 outline-none transition-colors" />
+          </div>
+        </div>
+
+        <!-- USERS ACCOUNT CONTAINER -->
+        <div class="pg-card p-4 space-y-3">
+          <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#475569;">Users Account / Suggested</p>
+          <div id="usersContainer" class="space-y-3 users-list-box">
+            
+            <div class="user-account-item flex items-center justify-between p-2 rounded-xl hover:bg-slate-900/50 transition cursor-pointer" onclick="openSideProfile('Usama Khan', 'MERN Stack Developer', 'UA')">
+              <div class="flex items-center gap-3">
+                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80" alt="Usama Khan" class="w-9 h-9 rounded-full object-cover border border-sky-500/20" />
+                <div>
+                  <h4 class="text-xs font-bold text-slate-200 user-name-target">Usama Khan</h4>
+                  <p class="text-[10px] text-slate-400">MERN Stack Developer</p>
+                </div>
+              </div>
+              <button data-connect-name="Usama Khan" onclick="event.stopPropagation(); pgHandleConnect(this, 'Usama Khan')" class="btn btn-xs rounded-full pg-connect-btn">Connect</button>
+            </div>
+
+            <div class="user-account-item flex items-center justify-between p-2 rounded-xl hover:bg-slate-900/50 transition cursor-pointer" onclick="openSideProfile('Usama Malik', 'UI/UX Designer', 'UM')">
+              <div class="flex items-center gap-3">
+                <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80" alt="Usama Malik" class="w-9 h-9 rounded-full object-cover border border-sky-500/20" />
+                <div>
+                  <h4 class="text-xs font-bold text-slate-200 user-name-target">Usama Malik</h4>
+                  <p class="text-[10px] text-slate-400">UI/UX Designer</p>
+                </div>
+              </div>
+              <button data-connect-name="Usama Malik" onclick="event.stopPropagation(); pgHandleConnect(this, 'Usama Malik')" class="btn btn-xs rounded-full pg-connect-btn">Connect</button>
+            </div>
+
+            <div class="user-account-item flex items-center justify-between p-2 rounded-xl hover:bg-slate-900/50 transition cursor-pointer" onclick="openSideProfile('Zainab Malik', 'HR Lead @ TechMatrix', 'ZM')">
+              <div class="flex items-center gap-3">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80" alt="Zainab Malik" class="w-9 h-9 rounded-full object-cover border border-sky-500/20" />
+                <div>
+                  <h4 class="text-xs font-bold text-slate-200 user-name-target">Zainab Malik</h4>
+                  <p class="text-[10px] text-slate-400">HR Lead @ TechMatrix</p>
+                </div>
+              </div>
+              <button data-connect-name="Zainab Malik" onclick="event.stopPropagation(); pgHandleConnect(this, 'Zainab Malik')" class="btn btn-xs rounded-full pg-connect-btn">Connect</button>
+            </div>
+
+            <div class="user-account-item flex items-center justify-between p-2 rounded-xl hover:bg-slate-900/50 transition cursor-pointer" onclick="openSideProfile('Haider Ali', 'Web Developer', 'HA')">
+              <div class="flex items-center gap-3">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80" alt="Haider Ali" class="w-9 h-9 rounded-full object-cover border border-sky-500/20" />
+                <div>
+                  <h4 class="text-xs font-bold text-slate-200 user-name-target">Haider Ali</h4>
+                  <p class="text-[10px] text-slate-400">Web Developer</p>
+                </div>
+              </div>
+              <button data-connect-name="Haider Ali" onclick="event.stopPropagation(); pgHandleConnect(this, 'Haider Ali')" class="btn btn-xs rounded-full pg-connect-btn">Connect</button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- TRENDING SECTOR -->
+        <div class="pg-card p-4 space-y-3">
+          <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#475569;">Trending in Tech</p>
+          <div style="font-size:11px;color:#94a3b8;line-height:1.9;">
+            <div><span style="color:#475569;font-size:9px;">1 · Technology</span><br/><span style="color:#cbd5e1;font-weight:700;">#ReactJS</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div style="padding: 0 0.5rem; margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: center;">
+      <a href="#" style="font-size: 11px; color: #475569; text-decoration: none;">About</a>
+      <a href="#" style="font-size: 11px; color: #475569; text-decoration: none;">Accessibility</a>
+      <a href="#" style="font-size: 11px; color: #475569; text-decoration: none;">Help Center</a>
+      <a href="#" style="font-size: 11px; color: #475569; text-decoration: none;">Privacy & Terms</a>
+      <p style="font-size: 11px; color: #334155; width: 100%; text-align: center; margin-top: 5px;">PeerGrid Matrix © 2026</p>
+    </div>
+
+  <div class="drawer-side" style="z-index: 9999;">
+    <label for="mobile-drawer-toggle" aria-label="close sidebar" class="drawer-overlay"></label>
+    <div class="p-4 w-80 min-h-full bg-slate-950 text-slate-200 border-r border-slate-800 space-y-4 overflow-y-auto">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+        <span class="text-xs font-bold text-sky-400 uppercase tracking-wider"><i class="fas fa-bars mr-2"></i> Menu</span>
+        <label for="mobile-drawer-toggle" class="btn btn-xs btn-circle btn-ghost text-slate-400"><i class="fas fa-times"></i></label>
+      </div>
+      
+      <div id="mobileDrawerDynamicContent" class="space-y-4 pt-2"></div>
+    </div>
+  </div>
+</div>
+
+<script src="pg-shared.js"></script>
+<script src="users-handler.js"></script>
+
+<script>
+let currentUser = null, currentFilter = 'all';
+
+window.onload = function () {
+  currentUser = pgGetUser(); if (!currentUser) return;
+  pgSeedDatabase();
+  pgBuildNav('alerts');
+  pgBuildLeftSidebar('pg-left-sidebar');
+  renderAlerts();
+  bindHamburgerToDaisyDrawer();
+};
+
+function executeFeedSearch(inputElement) {
+  const query = inputElement.value.toLowerCase().trim();
+  
+  const searchContainers = document.querySelectorAll('.users-list-box, #usersContainer');
+  
+  searchContainers.forEach(container => {
+    const userItems = container.querySelectorAll('.user-account-item');
+    userItems.forEach(item => {
+      const nameTxt = item.querySelector('.user-name-target')?.textContent || item.querySelector('h4')?.textContent || '';
+      if (nameTxt.toLowerCase().includes(query)) {
+        item.style.setProperty('display', 'flex', 'important');
+      } else {
+        item.style.setProperty('display', 'none', 'important');
+      }
+    });
+  });
+}
+
+function bindHamburgerToDaisyDrawer() {
+  const checkInterval = setInterval(() => {
+    const btn = document.querySelector('.pg-hamburger-nav') || document.querySelector('header button:has(.fa-bars)');
+    if (btn) {
+      clearInterval(checkInterval);
+      
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const cb = document.getElementById('mobile-drawer-toggle');
+        if(cb) {
+          cb.checked = !cb.checked;
+          if(cb.checked) {
+            const leftData = document.getElementById('pg-left-sidebar')?.innerHTML || '';
+            const rightData = document.getElementById('pg-right-sidebar')?.innerHTML || '';
+            
+            const targetDrawerContainer = document.getElementById('mobileDrawerDynamicContent');
+            targetDrawerContainer.innerHTML = `
+              <div class="space-y-4">${leftData}</div>
+              <div class="space-y-4">${rightData}</div>
+            `;
+
+            const clonedSearchInput = targetDrawerContainer.querySelector('#feedSearchInput');
+            if (clonedSearchInput) {
+              clonedSearchInput.removeAttribute('oninput');
+              clonedSearchInput.addEventListener('input', function() {
+                executeFeedSearch(this);
+              });
+            }
+          }
+        }
+      });
+    }
+  }, 100);
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+  document.getElementById('filter-' + f).classList.add('active');
+  renderAlerts();
+}
+
+function renderAlerts() {
+  let alerts = JSON.parse(localStorage.getItem('pg_alerts')) || [];
+  let filtered = alerts;
+  if (currentFilter === 'unread') filtered = alerts.filter(a => !a.read);
+  else if (currentFilter !== 'all') filtered = alerts.filter(a => a.type === currentFilter);
+
+  const box = document.getElementById('alertsList');
+  if (!filtered.length) {
+    box.innerHTML = `<div style="text-align:center;padding:40px;opacity:.4;"><i class="fas fa-bell-slash" style="font-size:24px;color:#475569;margin-bottom:8px;"></i><p style="font-size:12px;color:#64748b;">No notifications here.</p></div>`;
+    return;
+  }
+  box.innerHTML = filtered.map(a => `
+    <div class="alert-row ${a.read ? '' : 'unread'}" onclick="markRead('${a.id}')">
+      <div class="alert-icon" style="background:${a.color}18;color:${a.color};">
+        <i class="fas ${a.icon}"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <p style="font-size:13px;font-weight:700;color:#e2e8f0;">${a.title}</p>
+        <p style="font-size:11px;color:#94a3b8;margin-top:2px;">${a.body}</p>
+        <p style="font-size:10px;color:#475569;margin-top:4px;">${a.time}</p>
+      </div>
+      ${!a.read ? '<div class="alert-dot"></div>' : ''}
+    </div>`).join('');
+}
+
+function markRead(id) {
+  let alerts = JSON.parse(localStorage.getItem('pg_alerts')) || [];
+  const idx = alerts.findIndex(a => a.id === id);
+  if (idx !== -1 && !alerts[idx].read) { alerts[idx].read = true; localStorage.setItem('pg_alerts', JSON.stringify(alerts)); renderAlerts(); }
+}
+
+function markAllRead() {
+  let alerts = JSON.parse(localStorage.getItem('pg_alerts')) || [];
+  alerts.forEach(a => a.read = true);
+  localStorage.setItem('pg_alerts', JSON.stringify(alerts));
+  renderAlerts();
+  showToast('All notifications marked as read');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Jobs Board | RorkNexus </title>
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.2/dist/full.min.css" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<link rel="stylesheet" href="css/pg-shared.css"/>
+<style>
+.pg-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(2, 6, 23, .88);
+  backdrop-filter: blur(8px);
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  overflow-y: auto;
+}
+.pg-modal.active {
+  display: flex;
+}
+.pg-modal-box {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 720px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, .7);
+  animation: slideUp .22s ease;
+  margin: auto;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+
+/* ── UPDATED: Hover state changed from Green to Dashboard Blue ── */
+.post-card {
+  cursor: pointer;
+  transition: border-color .18s, transform .18s, box-shadow .18s;
+}
+.post-card:hover {
+  border-color: #38bdf8 !important; /* Perfect Feed Blue */
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(56, 189, 248, .12); /* Subtle Blue Glow */
+}
+
+/* ── ADDED: Active/Selected Card State ── */
+.post-card.active-card {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+}
+
+.tab-active-style {
+  background: #0c4a6e;
+  color: #38bdf8 !important;
+}
+.tab-btn {
+  cursor: pointer;
+  background: transparent;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1 }
+  50% { opacity: .4 }
+}
+.detail-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #64748b;
+  padding: 7px 0;
+  border-bottom: 1px solid #1e293b;
+}
+.detail-meta-row:last-child {
+  border-bottom: none;
+}
+.detail-meta-row span.label {
+  color: #94a3b8;
+  font-weight: 600;
+  min-width: 100px;
+}
+</style>
+</head>
+<body class="min-h-screen" style="background:#020617;">
+<div id="pg-toast"></div>
+
+<!-- JOB DETAIL MODAL -->
+<div id="detailModal" class="pg-modal" onclick="handleDetailModalBackdrop(event)">
+  <div class="pg-modal-box"><div id="detailModalContent"></div></div>
+</div>
+
+<header class="page-header" id="pg-nav"></header>
+
+
+
+<div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+
+<div class="page-wrapper">
+  <div class="mobile-menu-drawer" id="mobileMenuDrawer">
+    <div class="drawer-header">
+      <span style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#38bdf8;"><i class="fas fa-grip-lines mr-1"></i> Menu</span>
+      <button class="drawer-close-btn" onclick="closeMobileMenu()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="left-sidebar" id="pg-left-sidebar"></aside>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="right-sidebar space-y-4" id="pg-right-sidebar">
+      
+      <!-- DYNAMIC EXTENDED SIDE PROFILE PANEL -->
+      <div id="sideProfileCard" class="pg-card p-4 space-y-4 hidden animate-fadeIn" style="border-color: #38bdf8; animation: slideUp 0.2s ease;">
+        <div class="flex justify-between items-center pb-1 border-b border-slate-900">
+          <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#38bdf8;">User Profile Detail</p>
+          <button onclick="closeSideProfile()" class="text-slate-500 hover:text-rose-400 text-xs p-1"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div class="flex flex-col items-center text-center space-y-2 pt-1">
+          <div class="relative w-20 h-20">
+            <img id="sideUserImg" src="" alt="Profile" class="w-20 h-20 rounded-full object-cover border-2 border-sky-500/40 shadow-xl hidden" />
+            <div id="sideUserAvatar" class="w-20 h-20 rounded-full bg-slate-800 border border-sky-500/40 flex items-center justify-center text-2xl font-bold text-sky-400 shadow-xl"></div>
+          </div>
+          <div>
+            <h3 id="sideUserName" class="text-sm font-black text-slate-200 tracking-wide"></h3>
+            <p id="sideUserTitle" class="text-xs text-slate-400 mt-0.5"></p>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider"><i class="fas fa-user text-sky-500 mr-1"></i> About</p>
+          <p id="sideUserAbout" class="text-xs text-slate-300 bg-slate-950 p-2.5 rounded-xl border border-slate-900 leading-relaxed"></p>
+        </div>
+
+        <div class="space-y-1">
+          <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider"><i class="fas fa-code text-sky-500 mr-1"></i> Skills</p>
+          <div id="sideUserSkills" class="flex flex-wrap gap-1 bg-slate-950 p-2 rounded-xl border border-slate-900"></div>
+        </div>
+
+        <div class="space-y-1">
+          <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider"><i class="fas fa-briefcase text-sky-500 mr-1"></i> Experience</p>
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-900 flex items-center gap-2">
+            <i class="fas fa-building text-slate-600 text-xs pl-1"></i>
+            <p id="sideUserExperience" class="text-xs font-medium text-slate-300 truncate"></p>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider"><i class="fas fa-graduation-cap text-sky-500 mr-1"></i> Education</p>
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-900 flex items-center gap-2">
+            <i class="fas fa-university text-slate-600 text-xs pl-1"></i>
+            <p id="sideUserEducation" class="text-xs font-medium text-slate-300 truncate"></p>
+          </div>
+        </div>
+
+        <div class="w-full pt-2 flex gap-2 border-t border-slate-900">
+          <button id="sideMessageBtn" class="btn btn-xs btn-primary rounded-full flex-1 text-slate-900 font-bold py-1 text-[11px]">Message</button>
+          <button id="sideConnectBtn" data-connect-name="" onclick="pgHandleConnect(this, document.getElementById('sideUserName').textContent)" class="btn btn-xs rounded-full flex-1 text-[11px] pg-connect-btn">Connect</button>
+        </div>
+      </div>
+
+      <!-- SEARCH COMPONENT -->
+      <div class="pg-card p-4 space-y-2">
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#475569;">Search Feed & Users</p>
+        <div class="relative">
+          <i class="fas fa-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#64748b; font-size:12px;"></i>
+          <input type="text" id="feedSearchInput" oninput="executeFeedSearch()" placeholder="Search " class="w-full bg-slate-950 border border-slate-800 focus:border-sky-500 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 outline-none transition-colors" />
+        </div>
+      </div>
+
+      <!-- USERS ACCOUNT / SUGGESTED CONTAINER -->
+      <div class="pg-card p-4 space-y-3">
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#475569;">Users Account / Suggested</p>
+        <div id="usersContainer" class="space-y-3">
+          
+          <div class="user-account-item flex items-center justify-between p-2 rounded-xl hover:bg-slate-900/50 transition cursor-pointer" onclick="openSideProfile('Usama Khan', 'MERN Stack Developer', 'UA')">
+            <div class="flex items-center gap-3">
+              <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80" alt="Usama Khan" class="w-9 h-9 rounded-full object-cover border border-sky-500/20" />
+              <div>
+                <h4 class="text-xs font-bold text-slate-200">Usama Khan</h4>
+                <p class="text-[10px] text-slate-400">MERN Stack Developer</p>
+              </div>
+            </div>
+            <button data-connect-name="Usama Khan" onclick="event.stopPropagation(); pgHandleConnect(this, 'Usama Khan')" class="btn btn-xs rounded-full pg-connect-btn">Connect</button>
+          </div>
+
+          <div class="user-account-item flex items-center justify-between p-2 rounded-xl hover:bg-slate-900/50 transition cursor-pointer" onclick="openSideProfile('Usama Malik', 'UI/UX Designer', 'UM')">
+            <div class="flex items-center gap-3">
+              <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80" alt="Usama Malik" class="w-9 h-9 rounded-full object-cover border border-sky-500/20" />
+              <div>
+                <h4 class="text-xs font-bold text-slate-200">Usama Malik</h4>
+                <p class="text-[10px] text-slate-400">UI/UX Designer</p>
+              </div>
+            </div>
+            <button data-connect-name="Usama Malik" onclick="event.stopPropagation(); pgHandleConnect(this, 'Usama Malik')" class="btn btn-xs rounded-full pg-connect-btn">Connect</button>
+          </div>
+
+          <div class="user-account-item flex items-center justify-between p-2 rounded-xl hover:bg-slate-900/50 transition cursor-pointer" onclick="openSideProfile('Zainab Malik', 'HR Lead @ TechMatrix', 'ZM')">
+            <div class="flex items-center gap-3">
+              <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80" alt="Zainab Malik" class="w-9 h-9 rounded-full object-cover border border-sky-500/20" />
+              <div>
+                <h4 class="text-xs font-bold text-slate-200">Zainab Malik</h4>
+                <p class="text-[10px] text-slate-400">HR Lead @ TechMatrix</p>
+              </div>
+            </div>
+            <button data-connect-name="Zainab Malik" onclick="event.stopPropagation(); pgHandleConnect(this, 'Zainab Malik')" class="btn btn-xs rounded-full pg-connect-btn">Connect</button>
+          </div>
+
+          <div class="user-account-item flex items-center justify-between p-2 rounded-xl hover:bg-slate-900/50 transition cursor-pointer" onclick="openSideProfile('Haider Ali', 'Web Developer', 'HA')">
+            <div class="flex items-center gap-3">
+              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80" alt="Haider Ali" class="w-9 h-9 rounded-full object-cover border border-sky-500/20" />
+              <div>
+                <h4 class="text-xs font-bold text-slate-200">Haider Ali</h4>
+                <p class="text-[10px] text-slate-400">Web Developer</p>
+              </div>
+            </div>
+            <button data-connect-name="Haider Ali" onclick="event.stopPropagation(); pgHandleConnect(this, 'Haider Ali')" class="btn btn-xs rounded-full pg-connect-btn">Connect</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRENDING MATRIX SECTOR -->
+      <div class="pg-card p-4 space-y-3">
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#475569;">Trending in Tech</p>
+        <div style="font-size:11px;color:#94a3b8;line-height:1.9;">
+          <div><span style="color:#475569;font-size:9px;">1 · Technology</span><br/><span style="color:#cbd5e1;font-weight:700;">#ReactJS</span> <span style="color:#475569;">· 1.4k posts</span></div>
+          <div style="margin-top:8px;"><span style="color:#475569;font-size:9px;">2 · Jobs</span><br/><span style="color:#cbd5e1;font-weight:700;">#HiringNow</span> <span style="color:#475569;">· 892 posts</span></div>
+          <div style="margin-top:8px;"><span style="color:#475569;font-size:9px;">3 · Pakistan Tech</span><br/><span style="color:#cbd5e1;font-weight:700;">#FreelancePK</span> <span style="color:#475569;">· 678 posts</span></div>
+        </div>
+      </div>
+
+      <!-- PREMIUM ACTION CONTAINER -->
+      <div class="pg-card p-4 space-y-2" style="border-color:#451a0340;">
+        <div class="flex items-center gap-2"><i class="fas fa-star" style="color:#fbbf24;font-size:13px;"></i><p style="font-size:12px;font-weight:700;color:#fbbf24;">WorkNexus</p></div>
+        <p style="font-size:11px;color:#94a3b8;line-height:1.5;">Get seen by top recruiters. 3x more profile views with Pro.</p>
+        <button onclick="showToast('Pro coming soon! 🚀')" class="btn btn-xs rounded-full w-full" style="border:1px solid #92400e;color:#fbbf24;background:transparent;font-size:10px;font-weight:700;">Try for Free</button>
+      </div>
+    </aside>
+  </div>
+
+  <main class="main-content space-y-4">
+    <div class="pg-card p-1.5" style="display:flex;gap:4px;">
+      <button onclick="window.location='dashboard.html'" class="flex-1 tab-btn text-xs font-bold py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all text-slate-500" style="border:none;">
+        ← <i class="fas fa-stream text-xs"></i> Feed
+      </button>
+      <button id="tab-jobs" class="flex-1 tab-btn tab-active-style text-xs font-bold py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all" style="border:none;">
+        <i class="fas fa-briefcase text-xs"></i> Jobs Board
+      </button>
+    </div>
+
+    <div id="applyFormModal" class="pg-modal" onclick="if(event.target===this) closeApplyModal()">
+  <div class="pg-modal-box" style="max-width: 550px;">
+    <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900 rounded-t-3xl">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-paper-plane text-sky-400 text-xs"></i>
+        <span class="text-xs uppercase tracking-widest font-bold text-slate-200">Job Application Form</span>
+      </div>
+      <button onclick="closeApplyModal()" class="btn btn-ghost btn-xs btn-circle text-slate-500 hover:text-slate-100"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Applying For</label>
+        <input type="text" id="appJobTitle" class="pg-input bg-slate-950/60 cursor-not-allowed" disabled />
+        <input type="hidden" id="appJobId" />
+      </div>
+      
+      <div>
+        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
+        <input type="text" id="appFullName" class="pg-input" placeholder="Your Name" />
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Cover Letter / Professional Summary</label>
+        <textarea id="appDetails" placeholder="Why are you a good fit for this role? Tell us about your experience..." class="textarea textarea-bordered bg-slate-950 border-slate-800 focus:border-sky-500 w-full text-xs text-slate-200 h-24"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Upload CV / Resume</label>
+        <div class="flex items-center justify-center w-full">
+          <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-800 border-dashed rounded-xl cursor-pointer bg-slate-950 hover:bg-slate-900/50 transition-all group">
+            <div class="flex flex-col items-center justify-center pt-3 pb-4 text-center px-4">
+              <i class="fas fa-cloud-upload-alt text-slate-500 group-hover:text-sky-400 mb-1 text-lg transition-colors"></i>
+              <p class="text-[11px] text-slate-400" id="cvFileName">Click to upload CV <span class="text-slate-600">(PDF, DOCX)</span></p>
+            </div>
+            <input type="file" id="appCVFile" class="hidden" accept=".pdf,.doc,.docx" onchange="handleCVFileSelect(this)" />
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 pb-6 flex gap-3">
+      <button onclick="closeApplyModal()" class="btn btn-sm btn-outline border-slate-700 text-slate-400 hover:text-white flex-1 rounded-xl text-xs">Cancel</button>
+      <button onclick="submitApplicationAction()" class="btn btn-sm bg-sky-600 hover:bg-sky-500 border-none text-white flex-1 rounded-xl text-xs font-bold">Submit Application 🚀</button>
+    </div>
+  </div>
+</div>
+
+
+    <!-- Job Publisher -->
+    <div class="pg-card p-4 space-y-3">
+      <div class="flex gap-3 items-center">
+        <div id="publisherAvatar" class="w-10 h-10 rounded-full bg-emerald-900 border border-emerald-700 flex items-center justify-center text-emerald-400 font-black text-sm flex-shrink-0"><i class="fas fa-briefcase text-xs"></i></div>
+        <button onclick="focusPublisher()" class="flex-1 text-left bg-slate-950 border border-slate-800 hover:border-emerald-700 rounded-full px-4 py-2.5 text-xs text-slate-500 transition-colors">Post a job opening...</button>
+      </div>
+      <div id="publisherExpanded" class="hidden space-y-3 pt-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input type="text" id="jobTitle" placeholder="Job Title" class="pg-input"/>
+          <input type="text" id="jobCompany" placeholder="Company Name" class="pg-input"/>
+          <input type="text" id="jobLocation" placeholder="Location / Remote" class="pg-input"/>
+          <input type="text" id="jobSalary" placeholder="Salary Range" class="pg-input"/>
+        </div>
+        <textarea id="postInput" placeholder="Describe the role and requirements..." class="textarea textarea-bordered bg-slate-950 border-slate-800 focus:border-emerald-500 w-full text-xs text-slate-200 resize-none h-20"></textarea>
+        <div class="flex justify-end">
+          <button onclick="handlePublishAction()" class="btn btn-success btn-sm rounded-full text-slate-900 font-bold px-5 text-xs">
+            <i class="fas fa-paper-plane text-xs mr-1"></i> Post Job
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="contentDisplayStage" class="space-y-4"></div>
+  </main>
+</div>
+
+    <div style="padding: 0 0.5rem; margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: center;">
+      <a href="#" style="font-size: 11px; color: #475569; text-decoration: none;">About</a>
+      <a href="#" style="font-size: 11px; color: #475569; text-decoration: none;">Accessibility</a>
+      <a href="#" style="font-size: 11px; color: #475569; text-decoration: none;">Help Center</a>
+      <a href="#" style="font-size: 11px; color: #475569; text-decoration: none;">Privacy & Terms</a>
+      <p style="font-size: 11px; color: #334155; width: 100%; text-align: center; margin-top: 5px;">WorkNexus © 2026</p>
+    </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof pgRestoreConnectButtons === 'function') pgRestoreConnectButtons('#usersContainer');
+  });
+
+  function toggleMobileMenu() {
+    const drawer = document.getElementById('mobileMenuDrawer');
+    const overlay = document.getElementById('mobileMenuOverlay');
+    if (!drawer || !overlay) return;
+    drawer.classList.toggle('active');
+    overlay.classList.toggle('active');
+    document.body.style.overflow = drawer.classList.contains('active') ? 'hidden' : '';
+  }
+
+  function closeMobileMenu() {
+    const drawer = document.getElementById('mobileMenuDrawer');
+    const overlay = document.getElementById('mobileMenuOverlay');
+    if (!drawer || !overlay) return;
+    drawer.classList.remove('active');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  window.addEventListener('resize', function () {
+    if (window.innerWidth >= 1024) closeMobileMenu();
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof pgRestoreConnectButtons === 'function') pgRestoreConnectButtons('#usersContainer');
+  });
+</script>
+<script src="pg-shared.js"></script>
+<script src="users-handler.js"></script>
+<script>
+let currentUser = null, publisherOpen = false, profileData = {};
+
+// Helper function string escaping ke crash se bachne ke liye
+function safeStr(str) {
+  if(!str) return '';
+  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+window.onload = function () {
+  currentUser = pgGetUser(); if (!currentUser) return;
+  profileData = pgGetProfile(currentUser.email);
+  pgSeedDatabase();
+  pgBuildNav('jobs');
+  pgBuildLeftSidebar('pg-left-sidebar');
+  renderJobs();
+};
+
+function focusPublisher() {
+  if (!publisherOpen) { document.getElementById('publisherExpanded').classList.remove('hidden'); publisherOpen = true; setTimeout(() => document.getElementById('jobTitle').focus(), 50); }
+}
+
+function handlePublishAction() {
+  const title = document.getElementById('jobTitle').value.trim();
+  const company = document.getElementById('jobCompany').value.trim();
+  const location = document.getElementById('jobLocation').value.trim();
+  const salary = document.getElementById('jobSalary').value.trim();
+  const mainText = document.getElementById('postInput').value.trim();
+  if (!title || !company || !mainText) { showToast('Fill Title, Company & Description!'); return; }
+  let jobs = JSON.parse(localStorage.getItem('worknexus_jobs')) || [];
+  jobs.unshift({ id: 'job_' + Date.now(), title, company, location, salary, description: mainText, postedBy: currentUser.name, timestamp: new Date().toLocaleDateString(), likes: 0, likedBy: [], comments: [] });
+  localStorage.setItem('worknexus_jobs', JSON.stringify(jobs));
+  ['jobTitle','jobCompany','jobLocation','jobSalary','postInput'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('publisherExpanded').classList.add('hidden');
+  publisherOpen = false;
+  renderJobs();
+  showToast('Job posted! 🚀');
+}
+
+// FIXED: RENDERING LOGIC WITHOUT DEPENDENCIES AND SAFE BINDINGS
+function renderJobs() {
+  const stage = document.getElementById('contentDisplayStage'); 
+  if(!stage) return;
+  stage.innerHTML = '';
+  let jobs = JSON.parse(localStorage.getItem('worknexus_jobs')) || [];
+  
+  if (!jobs.length) {
+    stage.innerHTML = `<div class="pg-card" style="padding:40px;text-align:center;opacity:.4;"><p style="font-size:12px;color:#64748b;">No jobs available right now.</p></div>`;
+    return;
+  }
+
+  jobs.forEach(j => {
+    const isOwnJob = j.postedBy === currentUser.name; 
+    const isLiked = (j.likedBy || []).includes(currentUser.name);
+    
+    const hasApplied = (j.appliedBy || []).includes(currentUser.name);
+
+    const div = document.createElement('div');
+    div.className = 'pg-card post-card overflow-hidden mb-4';
+    div.id = `job-card-${j.id}`;
+    div.setAttribute('onclick', `openJobDetail('${j.id}')`);
+    
+    div.innerHTML = `
+      <div class="p-5 space-y-3">
+        <div class="flex justify-between items-start">
+          <div>
+            <h4 class="font-bold text-slate-200 text-sm">${j.title}</h4>
+            <p class="text-xs text-sky-400 font-semibold">${j.company}</p>
+            <p class="text-[10px] text-slate-500"><i class="fas fa-map-marker-alt mr-1"></i>${j.location || 'Remote'} | <i class="fas fa-money-bill-wave mr-1"></i>${j.salary || 'Market Rate'}</p>
+          </div>
+          <span class="text-[10px] text-slate-600 font-mono">${j.timestamp || ''}</span>
+        </div>
+        
+        <p class="text-xs text-slate-300 whitespace-pre-line leading-relaxed">${j.description}</p>
+        
+        <p class="text-[11px] text-slate-500">Posted by: <span class="text-slate-400 font-medium">${j.postedBy || 'Anonymous'}</span></p>
+      </div>
+      
+      <div class="border-t border-slate-800/60 px-4 py-2 flex items-center justify-between" onclick="event.stopPropagation();">
+        <button onclick="toggleLikeOnCard('${j.id}')" class="action-btn ${isLiked ? 'liked' : ''}">
+          <i class="fas fa-heart text-[10px]"></i> <span>${j.likes || 0}</span>
+        </button>
+        
+        <div>
+     ${isOwnJob ? `
+  <button class="btn btn-sm bg-rose-600 border-rose-500 text-white flex-1 rounded-xl text-xs font-bold" onclick="closeDetailModal(); deleteJobAction('${j.id}')">
+    <i class="fas fa-trash-alt text-xs"></i> Delete Job
+  </button>
+` : `
+  ${(j.appliedBy || []).includes(currentUser.name) ? `
+    <button class="btn btn-sm bg-slate-800 border-slate-700 text-slate-400 flex-1 rounded-xl text-xs font-bold cursor-not-allowed" disabled>
+      <i class="fas fa-check text-xs"></i> Applied
+    </button>
+  ` : `
+<button class="btn btn-sm btn-success flex-1 rounded-xl text-xs font-bold text-slate-900" onclick="closeDetailModal(); applyJobAction('${j.id}', '${safeStr(j.title)}')">
+  <i class="fas fa-paper-plane text-xs"></i> Apply Now
+</button>
+  `}
+`}
+        </div>
+      </div>`;
+      
+    stage.appendChild(div);
+  });
+}
+
+function toggleLikeOnCard(id) { 
+  pgToggleLike('job', id, currentUser.name, () => renderJobs()); 
+}
+
+function openJobDetail(jobId) {
+  let jobs = JSON.parse(localStorage.getItem('worknexus_jobs')) || [];
+  const j = jobs.find(x => x.id === jobId); if (!j) return;
+  
+  const isLiked = (j.likedBy || []).includes(currentUser.name);
+  const isOwnJob = j.postedBy === currentUser.name;
+  
+  const hasApplied = (j.appliedBy || []).includes(currentUser.name);
+  
+  const commentsHtml = (j.comments || []).map(c => `<div class="comment-bubble"><span class="cn">${c.author}:</span>${c.text}</div>`).join('');
+  
+  document.getElementById('detailModalContent').innerHTML = `
+    <div class="p-5 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur rounded-t-3xl z-10">
+      <div class="flex items-center gap-2"><i class="fas fa-briefcase text-emerald-400 text-xs"></i><span class="text-[10px] uppercase tracking-widest font-bold text-emerald-600">Job Opening</span></div>
+      <button onclick="closeDetailModal()" class="btn btn-ghost btn-xs btn-circle text-slate-500 hover:text-slate-100"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="p-6 space-y-5">
+      <div class="flex gap-4 items-start">
+        <div class="w-16 h-16 rounded-xl bg-emerald-900/30 border border-emerald-800/50 text-emerald-400 flex items-center justify-center flex-shrink-0 text-2xl"><i class="fas fa-building"></i></div>
+        <div>
+          <h2 class="text-xl font-black text-slate-100">${j.title}</h2>
+          <p class="text-sm font-bold text-slate-300">${j.company}</p>
+          <div class="flex flex-wrap gap-2 mt-2">
+            <span class="badge bg-sky-500/10 border-sky-800 text-sky-400 badge-sm text-[10px]"><i class="fas fa-map-marker-alt mr-1 text-[9px]"></i>${j.location || 'Remote'}</span>
+            <span class="badge bg-violet-500/10 border-violet-800 text-violet-400 badge-sm text-[10px]"><i class="fas fa-money-bill-wave mr-1 text-[9px]"></i>${j.salary || 'Market Rate'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-4"><p class="text-[10px] uppercase font-bold text-slate-500 mb-2 tracking-wider"><i class="fas fa-align-left mr-1"></i> Role Description</p><p class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">${j.description}</p></div>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="pg-card p-3 text-center"><p class="text-[9px] uppercase text-slate-500 font-bold tracking-wider">Likes</p><p class="text-xl font-black text-rose-400 mt-1">${j.likes || 0}</p></div>
+        <div class="pg-card p-3 text-center"><p class="text-[9px] uppercase text-slate-500 font-bold tracking-wider">Comments</p><p class="text-xl font-black text-sky-400 mt-1">${(j.comments || []).length}</p></div>
+        <div class="pg-card p-3 text-center"><p class="text-[9px] uppercase text-slate-500 font-bold tracking-wider">Posted by</p><p class="text-[10px] font-black text-emerald-400 mt-1">${j.postedBy || 'Anonymous'}</p></div>
+      </div>
+      <div class="detail-meta-row"><i class="fas fa-calendar text-slate-600 text-xs"></i><span class="label">Date Posted</span><span class="text-slate-400">${j.timestamp}</span></div>
+      <div>
+        <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-2"><i class="fas fa-comment mr-1"></i> Discussion</p>
+        <div id="modal-comments-${j.id}">${commentsHtml || '<p class="text-[11px] text-slate-600 italic">No comments yet.</p>'}</div>
+        <div class="comment-input-row"><input type="text" id="commentInput-${j.id}" placeholder="Ask about this role..." onkeydown="if(event.key==='Enter')submitJobComment('${j.id}')"/><button class="comment-send-btn" onclick="submitJobComment('${j.id}')"><i class="fas fa-paper-plane"></i></button></div>
+      </div>
+    </div>
+    <div class="px-6 pb-6 flex gap-3">
+      <button onclick="toggleLikeInModal('${j.id}')" class="action-btn flex-1 justify-center py-2.5 text-xs ${isLiked ? 'liked' : ''}"><i class="fas fa-heart"></i> <span id="modal-likes-${j.id}">${j.likes || 0}</span> Like</button>
+      <button onclick="closeDetailModal()" class="btn btn-sm btn-outline border-slate-700 text-slate-400 hover:text-white flex-1 rounded-xl text-xs"><i class="fas fa-arrow-left text-xs"></i> Back</button>
+      
+      ${isOwnJob ? `
+        <button class="btn btn-sm bg-rose-600 border-rose-500 text-white flex-1 rounded-xl text-xs font-bold" onclick="closeDetailModal(); deleteJobAction('${j.id}')">
+          <i class="fas fa-trash-alt text-xs"></i> Delete Job
+        </button>
+      ` : `
+        ${hasApplied ? `
+          <button class="btn btn-sm bg-slate-800 border border-slate-700 text-slate-400 flex-1 rounded-xl text-xs font-bold cursor-not-allowed" disabled>
+            <i class="fas fa-check text-xs"></i> Applied
+          </button>
+        ` : `
+          <button class="btn btn-sm btn-success flex-1 rounded-xl text-xs font-bold text-slate-900" onclick="closeDetailModal(); applyJobAction('${j.id}', '${safeStr(j.title)}')">
+            <i class="fas fa-paper-plane text-xs"></i> Apply Now
+          </button>
+        `}
+      `}
+    </div>`;
+    
+  document.getElementById('detailModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetailModal() { document.getElementById('detailModal').classList.remove('active'); document.body.style.overflow = ''; }
+function handleDetailModalBackdrop(e) { if (e.target === document.getElementById('detailModal')) closeDetailModal(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetailModal(); });
+
+function submitJobComment(id) {
+  const inputEl = document.getElementById('commentInput-' + id);
+  const text = inputEl.value.trim(); if (!text) return;
+  pgAddComment('job', id, currentUser.name, text);
+  inputEl.value = '';
+  document.getElementById('modal-comments-' + id).innerHTML += `<div class="comment-bubble"><span class="cn">${currentUser.name}:</span>${text}</div>`;
+  showToast('Comment posted!');
+  renderJobs();
+}
+
+function toggleLikeInModal(id) {
+  pgToggleLike('job', id, currentUser.name, item => {
+    const el = document.getElementById('modal-likes-' + id); if (el) el.textContent = item.likes;
+    const btn = el ? el.closest('button') : null;
+    if (btn) (item.likedBy || []).includes(currentUser.name) ? btn.classList.add('liked') : btn.classList.remove('liked');
+    renderJobs();
+  });
+}
+
+// ── FIXED ACTION: DELETE JOB FROM LOCALSTORAGE ──
+function deleteJobAction(jobId) {
+  if (confirm("Are you sure you want to delete this job opening?")) {
+    let jobs = JSON.parse(localStorage.getItem('worknexus_jobs')) || [];
+    jobs = jobs.filter(j => j.id !== jobId);
+    localStorage.setItem('worknexus_jobs', JSON.stringify(jobs));
+    
+    if (typeof showToast === "function") {
+      showToast("Job opening deleted successfully! 🗑️");
+    } else {
+      alert("Job opening deleted successfully! 🗑️");
+    }
+    renderJobs(); 
+  }
+}
+
+let selectedCVBase64 = ""; 
+
+function applyJobAction(jobId, jobTitle) {
+  document.getElementById('appJobId').value = jobId;
+  document.getElementById('appJobTitle').value = jobTitle;
+  document.getElementById('appFullName').value = currentUser.name || '';
+  document.getElementById('appDetails').value = '';
+  document.getElementById('cvFileName').innerHTML = 'Click to upload CV <span class="text-slate-600">(PDF, DOCX)</span>';
+  selectedCVBase64 = ""; 
+  
+  document.getElementById('applyFormModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeApplyModal() {
+  document.getElementById('applyFormModal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function handleCVFileSelect(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    document.getElementById('cvFileName').innerHTML = `<span class="text-sky-400 font-bold"><i class="fas fa-file-pdf mr-1"></i> ${file.name}</span> selected.`;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      selectedCVBase64 = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function submitApplicationAction() {
+  const jobId = document.getElementById('appJobId').value;
+  const jobTitle = document.getElementById('appJobTitle').value;
+  const fullName = document.getElementById('appFullName').value.trim();
+  const details = document.getElementById('appDetails').value.trim();
+  
+  if (!fullName || !details) {
+    showToast('Please fill your Name and Cover Letter details!');
+    return;
+  }
+  
+  if (!selectedCVBase64) {
+    showToast('Please upload your CV file!');
+    return;
+  }
+
+  let jobs = JSON.parse(localStorage.getItem('worknexus_jobs')) || [];
+  const jobIndex = jobs.findIndex(j => j.id === jobId);
+  
+  if (jobIndex !== -1) {
+    if (!jobs[jobIndex].appliedBy) jobs[jobIndex].appliedBy = [];
+    if (!jobs[jobIndex].applications) jobs[jobIndex].applications = [];
+
+    const applicationPayload = {
+      applicantName: fullName,
+      applicantEmail: currentUser.email,
+      coverLetter: details,
+      cvFile: selectedCVBase64,
+      timestamp: new Date().toLocaleDateString()
+    };
+
+    jobs[jobIndex].appliedBy.push(currentUser.name);
+    jobs[jobIndex].applications.push(applicationPayload);
+    
+    localStorage.setItem('worknexus_jobs', JSON.stringify(jobs));
+    
+    closeApplyModal();
+    
+    if (typeof showToast === "function") {
+      showToast(`Application submitted for "${jobTitle}"! 🚀`);
+    } else {
+      alert(`Application submitted for "${jobTitle}"! 🚀`);
+    }
+    
+    renderJobs();
+  }
+}
+</script>
+</body>
+</html>

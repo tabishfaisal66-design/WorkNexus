@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" id="rootHtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | WorkNexus</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+
+    <header class="w-full px-6 py-4">
+        <nav class="flex items-center gap-4">
+            <a href="index.html" class="text-slate-400 hover:text-white transition text-lg">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <a href="index.html" class="flex items-center gap-2">
+                <span class="inline-flex items-center justify-center bg-sky-600 text-white font-black text-sm rounded px-1.5 py-0.5 tracking-tighter uppercase font-sans">WN</span>
+                <span class="text-xs font-bold tracking-widest text-slate-400">WorkNexus</span>
+            </a>
+        </nav>
+    </header>
+
+    <main class="flex-grow flex justify-center p-4 pt-16">
+        <div class="card w-full max-w-sm bg-slate-900 border border-slate-800 shadow-2xl p-6 rounded-2xl space-y-5 h-fit">
+            <div class="text-center">
+                <h3 class="text-xl font-black text-slate-100">Sign In</h3>
+                <p class="text-xs text-slate-400 mt-1">Access your WorkNexus dashboard.</p>
+            </div>
+
+            <div id="alertBox" class="alert alert-error text-xs p-2.5 hidden rounded-lg"></div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-3.5">
+                <div class="form-control">
+                    <label class="label-text text-[11px] text-slate-400 mb-1">Email Address</label>
+                    <input type="email" id="authEmail" class="input input-sm input-bordered w-full bg-slate-950 border-slate-800 text-xs text-white" required />
+                </div>
+                <div class="form-control">
+                    <label class="label-text text-[11px] text-slate-400 mb-1">Password</label>
+                    <input type="password" id="authPassword" class="input input-sm input-bordered w-full bg-slate-950 border-slate-800 text-xs text-white" required />
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm w-full text-slate-900 font-bold rounded-full mt-2">Sign In</button>
+            </form>
+
+            <div class="text-center pt-3 border-t border-slate-800 text-xs text-slate-400">
+                <span>New to our platform?</span>
+                <a href="signup.html" class="text-sky-500 font-semibold hover:underline ml-1">Create account</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-6 text-slate-500 text-[10px]">
+        About • Accessibility • Help Center • Privacy & Terms
+    </footer>
+
+    <script>
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const alertBox = document.getElementById('alertBox');
+            alertBox.classList.add('hidden');
+
+            let users = JSON.parse(localStorage.getItem('peergrid_users')) || [];
+            const foundUser = users.find(u => u.email === email && u.password === password);
+
+            if (foundUser) {
+                localStorage.setItem('ln_current_user', JSON.stringify(foundUser));
+                window.location.href = 'dashboard.html';
+            } else {
+                alertBox.textContent = "Invalid email or password. Please try again.";
+                alertBox.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
